@@ -1,88 +1,74 @@
-/* eslint-env mocha */
-/* global angular, assert, inject */
+import "mocha";
+import { assert } from "chai";
 
-describe("accountsService", () => {
-    const api = "/api/account",
-        apiInstruments = "/api/instruments";
+import { AccountsService } from "./accounts.service";
+import { SessionService } from "../session/session.service";
 
-    let $httpBackend,
-        sessionService,
-        accountsService;
+const { beforeEach, describe, it } = window;
 
-    beforeEach(module("components"));
+describe("AccountsService", () => {
+    const environment = "my environment";
+    const token = "my token";
+    const accountId = "my account id";
 
-    beforeEach(inject($injector => {
-        const environment = "my environment",
-            token = "my token",
-            accountId = "my account id";
+    beforeEach(() => {
+        const apiAccount = "/api/account";
+        const apiInstruments = "/api/instruments";
 
-        $httpBackend = $injector.get("$httpBackend");
-        accountsService = $injector.get("AccountsService");
-        sessionService = $injector.get("SessionService");
+        /* eslint no-new:off */
+        new AccountsService({});
 
-        sessionService.setCredentials({
+        SessionService.setCredentials({
             environment,
             token,
             accountId
         });
 
-        $httpBackend
-            .when("POST", api)
-            .respond({
-                account: {
-                    currency: "USD",
-                    accountId: 7442890,
-                    balance: 110410.5028,
-                    marginAvailable: 110394.9676,
-                    marginCallMarginUsed: 18.1671,
-                    realizedPL: -1983.78,
-                    unrealizedPL: 2.6319
-                }
-            });
+        fetch.mock(apiAccount, {
+            account: {
+                currency: "USD",
+                accountId: 7442890,
+                balance: 110410.5028,
+                marginAvailable: 110394.9676,
+                marginCallMarginUsed: 18.1671,
+                realizedPL: -1983.78,
+                unrealizedPL: 2.6319
+            }
+        });
 
-        $httpBackend
-            .when("POST", apiInstruments)
-            .respond([
-                {
-                    displayName: "EUR/USD",
-                    name: "EUR_USD",
-                    maximumOrderUnits: "100000000",
-                    pipLocation: -4
-                }
-            ]);
-
-        $httpBackend.whenGET(/^app\/.*\.html$/).respond(200);
-    }));
-
-    afterEach(() => {
-        $httpBackend.verifyNoOutstandingExpectation();
-        $httpBackend.verifyNoOutstandingRequest();
+        fetch.mock(apiInstruments, [
+            {
+                displayName: "EUR/USD",
+                name: "EUR_USD",
+                maximumOrderUnits: "100000000",
+                pipLocation: -4
+            }
+        ]);
     });
 
     it("getAccount", () => {
-        const account = accountsService.getAccount();
+        const account = AccountsService.getAccount();
 
-        assert.strictEqual(true, angular.isObject(account));
+        assert.strictEqual("{}", JSON.stringify(account));
     });
 
     it("getAccounts", () => {
-        accountsService.getAccounts({
-            environment: "my environment",
-            token: "my token",
-            accountId: "my account id"
+        AccountsService.getAccounts({
+            environment,
+            token,
+            accountId
         }).then(() => {
-            const account = accountsService.getAccount();
+            const account = AccountsService.getAccount();
 
             assert.strictEqual("USD", account.currency);
-            assert.strictEqual(7442890, account.accountId);
+            assert.strictEqual("7442890", account.accountId);
             assert.strictEqual(110410.5028, account.balance);
             assert.strictEqual(110394.9676, account.marginAvailable);
             assert.strictEqual(18.1671, account.marginCallMarginUsed);
             assert.strictEqual(-1983.78, account.realizedPL);
             assert.strictEqual(2.6319, account.unrealizedPL);
-            assert.isDefined(account.timestamp);
+            assert.strictEqual(true, account.timestamp !== null);
             assert.strictEqual(0.0023837406163863604, account.unrealizedPLPercent);
         });
-        $httpBackend.flush();
     });
 });
